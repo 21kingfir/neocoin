@@ -134,7 +134,7 @@ int main() {
     const char* searchrsakeys = "SELECT privkey FROM rsakey WHERE (?) ";
     const char* getsqlsold = "SELECT amount FROM tx WHERE (?)";
     const char* getidlastrsakey = "SELECT id FROM rsakey ORDER BY id DESC LIMIT 1";
-    const char* getaccountid = "SELECT "
+    const char* getaccountid = "SELECT id from users WHERE (identifier = ?, password = ?)";
 
     int rc = sqlite3_open("db/db.db", &db);
 
@@ -200,10 +200,33 @@ int main() {
 
     httplib::Server server;
 
-    server.Post("/getaccountsold", [&](const Request& req, Response& resp) {
+    server.Post("/getaccountid", [&db, &getaccountid](const Request& req, Response& resp) {
         string body = resp.body;
+        sqlite3_stmt* stmt;
         auto j = json::parse(body);
 
+        int rc = sqlite3_prepare_v2(db, getaccountid, -1, &stmt, nullptr);
+
+        if (rc != SQLITE_DONE) {
+            resp.set_content("error while preparing sql request", "text/plain");
+            resp.status = 500;
+            return;
+        }
+        string id = j["id"];
+        string pwd = j["pwd"];
+
+        sqlite3_bind_text(stmt, 1 , id.c_str(), -1, nullptr);
+        sqlite3_bind_text(stmt, 2 , pwd.c_str(), -1, nullptr);
+
+        int user_id;
+
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            user_id = sqlite3_column_int(stmt, 0);
+        }
+
+        string resultid = to_string(user_id);
+
+        resp.set_content(resultid.c_str(), "");
     });
 
     server.Get("/getrsakey", [&](const Request& req, Response& response) {

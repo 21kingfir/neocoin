@@ -13,12 +13,39 @@ async function getrsakey(ip) {
 
 async function fetchgetaccountid(identifient, pwd, ipsite) {
     try {
-        const donnee = await fetch(ip);
+        const donnee = await fetch(ipsite, {  
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({"id":identifient, "password":pwd})
+        });
 
         if (!donnee.ok) {
-            
+            throw new Error("" + donnee.error);
         }
         
+        const data = await donnee.json();
+        return data;
+    } catch(error) {
+        return error;
+    }
+}
+
+async function getaccountsold(idaccount, route) {
+    try {
+        const resp = await fetch(route, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({"id":idaccount})
+        });
+
+        if (!resp.ok) {
+            throw new Error("" + resp.error);
+        }
+
+        const datas = await resp.json();
+        return datas;
+    } catch (error) {
+        return error;
     }
 }
 
@@ -27,12 +54,10 @@ const pemFooter = "-----END PUBLIC KEY-----\n";
 
 const ipgetrsakey = "http://:8080/getrsakey";
 const ipgetaccountid = "http://8080/getaccountid"
+const ipgetaccountsold = "http://8080/getaccountsold"
 
 const id = localStorage.getItem("id");
 const password = localStorage.getItem("password");
-
-const rawdata = {"id":id, "password":password};
-const jdata = JSON.stringify(rawdata);
 
 const jsondata = getrsakey(ipgetrsakey);
 
@@ -55,4 +80,8 @@ const encpwd = await crypto.subtle.encrypt({ name: "RSA-OAEP"}, finalpublickey, 
 
 const b64encid = btoa(String.fromCharCode(...new Uint8Array(encid)));
 const b64encpwd = btoa(String.fromCharCode(...new Uint8Array(encpwd)));
+
+const accountid = fetchgetaccountid(b64encid, b64encid, ipgetaccountid);
+
+const sold = getaccountsold(accountid, ipgetaccountsold);
 
